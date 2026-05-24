@@ -5,7 +5,7 @@
    2. Km€ em todas as referências visuais
    3. Trial 7 dias (era 14)
    4. Phone Auth (Firebase) com reCAPTCHA invisível — sem e-mail/password
-   5. Admin bypass: admin@kmlucro.pt salta validação de subscrição
+   5. Admin bypass: info.momentoeficaz@gmail.com salta validação de subscrição
 ================================================================ */
 'use strict';
 
@@ -20,7 +20,7 @@ const IRS_COEF        = 0.35;
 const ALERT_WARN      = 0.40;
 const ALERT_DANGER    = 0.30;
 const TRIAL_DAYS      = 7;    /* ← retificação: era 14 */
-const STRIPE_URL      = 'https://buy.stripe.com/SUBSTITUIR_LINK';
+const STRIPE_URL      = 'https://buy.stripe.com/test_fZu5kFgpl75b2Rgc3Wfw400'
 /* ═══════════════════════════════════════════════════════════════
    PATCH 2 (EV-003): OTP Rate Limiting — Previne brute-force
 ═══════════════════════════════════════════════════════════════ */
@@ -275,14 +275,14 @@ document.addEventListener('DOMContentLoaded', async () => {
        Para activar: criar utilizador Phone na consola Firebase
        com o número desejado e copiar o UID abaixo.
     ───────────────────────────────────────────────────────── */
-    const ADMIN_UID = 'SUBSTITUIR_UID_DO_ADMIN'; // UID do Firebase Console
-    if(user.uid === ADMIN_UID) {
-      ud = {
-        ...ud,
-        isSubscribed: true,
-        subscriptionStatus: 'active',
-      };
-    }
+const ADMIN_UID = 'sKkY28WFB9g81i1JJJ4ToD68zE33'; // UID do Firebase Console
+if(user.uid === ADMIN_UID) {
+  ud = {
+    ...ud,
+    isSubscribed: true,
+    subscriptionStatus: 'active',
+  };
+}
 
     APP.userData   = ud;
     APP.mode       = ud.mode       || 'motorista';
