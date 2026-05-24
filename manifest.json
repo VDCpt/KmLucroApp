@@ -1,0 +1,36 @@
+{
+  "name": "KmLucro — Gestão TVDE",
+  "short_name": "KmLucro",
+  "description": "Calculadora de lucro real e gestão de turnos para motoristas TVDE.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0d",
+  "theme_color": "#c8f135",
+  "lang": "pt-PT",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Registar Turno",
+      "short_name": "Turno",
+      "url": "index.html?tab=turno",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

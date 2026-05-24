@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ─────────────────────────────────────────────────────────
+       FUNÇÕES AUXILIARES (com validação de segurança)
+    ───────────────────────────────────────────────────────── */
+    
+    function isAuth()      { return request.auth != null; }
+    function isOwner(uid)  { return request.auth.uid == uid; }
+
+    /* PATCH (EV-006): userData() com validação de permissão */
+    function userData(uid) {
+      // Verificar permissão ANTES de ler dados
+      if (!isAuth() || !isOwner(uid)) return null;
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    /* PATCH (EV-007): Constantes para validação de timestamp */
+    function TRIAL_MAX_DAYS() { return 7; }
+    function MAX_FUTURE_DATE() {
+      return request.time.toMillis() + (TRIAL_MAX_DAYS() * 86400000);
+    }
+
+    /* Acesso permitido: subscrito activo OU trial válido (com limite) */
+    function canAccess(uid) {
+      let ud = userData(uid);
+      if (ud == null) return false;
+      
+      return isAuth() && isOwner(uid) && (
+        (ud.subscriptionStatus == 'active') ||
+        (ud.subscriptionStatus == 'trialing' && 
+         ud.trialEndsAt > request.time &&
+         ud.trialEndsAt <= MAX_FUTURE_DATE())  /* PATCH (EV-007): Validar limite máximo */
+      );
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       UTILIZADORES
+    ───────────────────────────────────────────────────────── */
+    match /users/{uid} {
+      allow read: if isAuth() && isOwner(uid);
+
+      /* PATCH (EV-008): Adicionar validação de não-existência */
+      allow create: if isAuth() && isOwner(uid)
+        && !exists(/databases/$(database)/documents/users/$(uid))  /* Verificar não-existência */
+        && request.resource.data.isSubscribed == false
+        && request.resource.data.subscriptionStatus == 'trialing'
+        && request.resource.data.uid == uid
+        && request.resource.data.trialEndsAt > request.time  /* Validar data */
+        && request.resource.data.trialEndsAt <= MAX_FUTURE_DATE();  /* Limitar a 7 dias */
+
+      allow update: if isAuth() && isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+           .hasAny(['isSubscribed', 'subscriptionStatus', 'stripeCustomerId',
+                    'stripeSubscriptionId', 'trialEndsAt', 'currentPeriodEnd']);
+
+      allow delete: if false;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       TURNOS — apenas durante período de acesso válido
+    ───────────────────────────────────────────────────────── */
+    match /users/{uid}/shifts/{shiftId} {
+      allow read, write: if canAccess(uid);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       VEÍCULOS
+    ───────────────────────────────────────────────────────── */
+    match /users/{uid}/vehicles/{vehicleId} {
+      allow read, write: if canAccess(uid);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       ALERTAS
+    ───────────────────────────────────────────────────────── */
+    match /users/{uid}/alerts/{alertId} {
+      allow read, write: if canAccess(uid);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       EVENTOS DE SUBSCRIÇÃO (PATCH EV-009: Remover dados sensíveis)
+       Apenas Cloud Functions escrevem.
+       Apenas o utilizador pode ler seus próprios eventos.
+    ───────────────────────────────────────────────────────── */
+    match /subscriptionEvents/{eventId} {
+      allow read: if isAuth() && resource.data.uid == request.auth.uid;
+      allow write: if false;  /* Apenas Cloud Functions via security context */
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       AUDIT LOG (novo — para conformidade Lei n.º 32/2021)
+       Apenas Cloud Functions escrevem.
+       Utilizadores só conseguem ler seus próprios registos de acesso.
+    ───────────────────────────────────────────────────────── */
+    match /auditLog/{eventId} {
+      allow read: if isAuth() && resource.data.uid == request.auth.uid;
+      allow write: if false;  /* Apenas Cloud Functions */
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       ADMIN COLLECTION (novo — para PATCH 1: EV-001)
+       Define quais UIDs são admins com MFA verificado.
+    ───────────────────────────────────────────────────────── */
+    match /admins/{uid} {
+      allow read: if isAuth() && isOwner(uid);  /* Utilizador pode ler seu próprio status */
+      allow write: if false;  /* Apenas admin manual na consola */
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       TUDO O RESTO: BLOQUEADO
+    ───────────────────────────────────────────────────────── */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

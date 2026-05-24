@@ -1,0 +1,30 @@
+{
+  "name": "kmlucro-pwa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Calculadora de lucro real para motoristas e frotistas TVDE",
+  "type": "module",
+  "scripts": {
+    "dev":     "vite --port 3000 --open",
+    "build":   "vite build --mode production",
+    "preview": "vite preview --port 4000",
+    "deploy":  "npm run build && firebase deploy --only hosting,functions",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "deploy:rules":   "firebase deploy --only firestore:rules",
+    "deploy:functions":"firebase deploy --only functions",
+    "emulate": "firebase emulators:start --import=./emulator-data --export-on-exit",
+    "lint":    "echo 'Sem linter configurado. Adicione eslint se necessário.'"
+  },
+  "dependencies": {
+    "firebase": "^10.12.2"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0",
+    "terser": "^5.31.0",
+    "rollup-plugin-obfuscator": "^3.1.1",
+    "firebase-tools": "^13.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

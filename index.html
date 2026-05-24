@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+  <meta name="theme-color" content="#0d0d0d"/>
+  <!-- PWA: mobile-web-app-capable corrige aviso de depreciação no Chrome/Android -->
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="KmLucro"/>
+  <meta name="description" content="Calculadora de lucro real e gestão de turnos para motoristas TVDE."/>
+  <!-- Caminho relativo: funciona em subpasta GitHub Pages /KmLucro/ -->
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <link rel="stylesheet" href="style.css"/>
+  <title>KmLucro — Gestão TVDE</title>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     ECRÃ: REGISTO — Phone Auth em 2 passos
+     Segurança: nº telemóvel → reCAPTCHA invisível → SMS OTP
+     Sem e-mail/password — identidade verificada por SMS.
+══════════════════════════════════════════════════════════════ -->
+<div id="screen-register" class="screen active">
+  <div class="auth-wrap">
+    <div class="auth-logo-row">
+      <div class="auth-badge">Km<span style="color:#0d0d0d;">€</span></div>
+      <div>
+        <span class="auth-name">KmLucro</span>
+        <span class="auth-tagline">Gestão TVDE</span>
+      </div>
+    </div>
+
+    <!-- PASSO 1 — Número -->
+    <div class="auth-card" id="reg-step-phone">
+      <div class="auth-title">Criar Conta</div>
+      <div class="auth-sub">7 dias grátis · sem cartão · depois 2,50&nbsp;€/mês</div>
+      <div class="auth-error" id="reg-err-phone"></div>
+      <div class="auth-fields">
+        <div>
+          <label class="inp-label" for="reg-name">Nome completo</label>
+          <input type="text" id="reg-name" placeholder="ex: João Silva"
+            autocomplete="name" inputmode="text"/>
+        </div>
+        <div>
+          <label class="inp-label" for="reg-mode-sel">Perfil</label>
+          <select id="reg-mode-sel">
+            <option value="motorista">🚗 Motorista</option>
+            <option value="frotista">🚙 Frotista / Empresário</option>
+          </select>
+        </div>
+        <div>
+          <label class="inp-label" for="reg-phone">Telemóvel (Portugal)</label>
+          <div class="phone-row">
+            <span class="phone-prefix">🇵🇹 +351</span>
+            <input type="tel" id="reg-phone" placeholder="912 345 678"
+              autocomplete="tel-national" inputmode="tel" maxlength="12"/>
+          </div>
+          <p class="hint-txt" style="margin-top:5px;">
+            Enviamos um código SMS para verificar a tua identidade.
+          </p>
+        </div>
+      </div>
+      <!-- reCAPTCHA invisível — obrigatório pelo Firebase Phone Auth -->
+      <div id="recaptcha-reg"></div>
+      <button class="btn btn-lime" id="btn-send-sms-reg">Enviar Código SMS</button>
+      <div class="auth-switch">Já tens conta? <a id="go-login">Entrar</a></div>
+      <div class="trial-note">✓ 7 dias grátis &nbsp;·&nbsp; ✓ Cancela quando quiseres</div>
+    </div>
+
+    <!-- PASSO 2 — OTP -->
+    <div class="auth-card hidden" id="reg-step-otp">
+      <div class="auth-title">Verificar Telemóvel</div>
+      <div class="auth-sub" id="reg-otp-sub">Código enviado para +351 ···</div>
+      <div class="auth-error" id="reg-err-otp"></div>
+      <div class="auth-fields">
+        <div>
+          <label class="inp-label" for="reg-otp">Código SMS (6 dígitos)</label>
+          <input type="text" id="reg-otp" placeholder="123456"
+            inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+            style="letter-spacing:.3em;font-size:1.4rem;text-align:center;"/>
+        </div>
+      </div>
+      <button class="btn btn-lime" id="btn-verify-sms-reg">Verificar e Criar Conta</button>
+      <div class="auth-switch"><a id="reg-back-phone">↩ Voltar e reenviar código</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ECRÃ: LOGIN — Phone Auth em 2 passos
+══════════════════════════════════════════════════════════════ -->
+<div id="screen-login" class="screen">
+  <div class="auth-wrap">
+    <div class="auth-logo-row">
+      <div class="auth-badge">Km<span style="color:#0d0d0d;">€</span></div>
+      <div>
+        <span class="auth-name">KmLucro</span>
+        <span class="auth-tagline">Gestão TVDE</span>
+      </div>
+    </div>
+
+    <!-- PASSO 1 — Número -->
+    <div class="auth-card" id="login-step-phone">
+      <div class="auth-title">Entrar</div>
+      <div class="auth-sub">Bem-vindo de volta.</div>
+      <div class="auth-error" id="login-err-phone"></div>
+      <div class="auth-fields">
+        <div>
+          <label class="inp-label" for="login-phone">Telemóvel</label>
+          <div class="phone-row">
+            <span class="phone-prefix">🇵🇹 +351</span>
+            <input type="tel" id="login-phone" placeholder="912 345 678"
+              autocomplete="tel-national" inputmode="tel" maxlength="12"/>
+          </div>
+        </div>
+      </div>
+      <div id="recaptcha-login"></div>
+      <button class="btn btn-lime" id="btn-send-sms-login">Enviar Código SMS</button>
+      <div class="auth-switch">Não tens conta? <a id="go-register">Criar conta grátis</a></div>
+    </div>
+
+    <!-- PASSO 2 — OTP -->
+    <div class="auth-card hidden" id="login-step-otp">
+      <div class="auth-title">Verificar</div>
+      <div class="auth-sub" id="login-otp-sub">Código enviado para +351 ···</div>
+      <div class="auth-error" id="login-err-otp"></div>
+      <div class="auth-fields">
+        <div>
+          <label class="inp-label" for="login-otp">Código SMS (6 dígitos)</label>
+          <input type="text" id="login-otp" placeholder="123456"
+            inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+            style="letter-spacing:.3em;font-size:1.4rem;text-align:center;"/>
+        </div>
+      </div>
+      <button class="btn btn-lime" id="btn-verify-sms-login">Verificar e Entrar</button>
+      <div class="auth-switch"><a id="login-back-phone">↩ Voltar e reenviar código</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ECRÃ: BLOQUEADO
+══════════════════════════════════════════════════════════════ -->
+<div id="screen-blocked" class="screen">
+  <div class="blocked-wrap">
+    <div class="blocked-icon">🔒</div>
+    <div class="blocked-title">Acesso Suspenso</div>
+    <p class="blocked-msg">
+      O teu período de prova terminou.<br/>
+      Subscreve por <strong>2,50&nbsp;€/mês</strong> para continuar.
+    </p>
+    <div class="stack" style="max-width:360px;width:100%;">
+      <button class="btn btn-lime" id="btn-subscribe">💳 Subscrever 2,50&nbsp;€/mês</button>
+      <button class="btn btn-outline" id="btn-logout-blocked">Terminar Sessão</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ECRÃ: APP
+══════════════════════════════════════════════════════════════ -->
+<div id="screen-app" class="screen">
+
+  <header class="app-header">
+    <div class="hdr-left">
+      <div class="hdr-badge">K<span style="font-size:.7em;color:#0d0d0d;">€</span></div>
+      <div>
+        <span class="hdr-name">KmLucro</span>
+        <span class="hdr-mode" id="hdr-mode">Motorista</span>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="offline-dot hidden" id="offline-dot" title="Sem ligação"></div>
+      <button class="hdr-btn" id="btn-logout" title="Terminar sessão">⏻</button>
+    </div>
+  </header>
+
+  <div class="sub-banner hidden" id="sub-banner"></div>
+
+  <main class="app-main" id="app-main">
+
+    <!-- DASHBOARD -->
+    <section class="tab-pane active" id="pane-dashboard">
+      <div class="sec-hd">
+        <div><div class="sec-title">Dashboard</div><div class="sec-sub" id="dash-date"></div></div>
+        <button class="chip" id="btn-edit-goal">⚙ Meta</button>
+      </div>
+
+      <div class="goal-card">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+          <span class="hint-txt">META DO DIA</span>
+          <span class="hint-txt" id="goal-pct">0%</span>
+        </div>
+        <div class="goal-row">
+          <span class="goal-cur" id="goal-cur">0,00&nbsp;€</span>
+          <span class="goal-tgt" id="goal-tgt">/ 100,00&nbsp;€</span>
+        </div>
+        <div class="goal-track"><div class="goal-fill" id="goal-fill" style="width:0%"></div></div>
+        <div class="goal-msg" id="goal-msg">Inicia o teu turno para começar.</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi kpi-lime">
+          <div class="kpi-lbl">Líquido Hoje</div>
+          <div class="kpi-val" id="k-net">0,00&nbsp;€</div>
+          <div class="kpi-sub" id="k-hr">—/hora</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">€ / km</div>
+          <div class="kpi-val" id="k-km">0,000&nbsp;€</div>
+          <div class="kpi-sub" id="k-km-sub">0,0 km</div>
+        </div>
+        <div class="kpi kpi-amber">
+          <div class="kpi-lbl">💰 Mealheiro</div>
+          <div class="kpi-val" id="k-piggy">0,00&nbsp;€</div>
+          <div class="kpi-sub">manutenção</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Este Mês</div>
+          <div class="kpi-val" id="k-month">0,00&nbsp;€</div>
+          <div class="kpi-sub" id="k-month-sub">0 turnos</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><span class="card-label">Plataformas — Mês</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'Space Mono',monospace;font-size:.65rem;width:38px;color:#f0ede8;">UBER</span>
+            <div style="flex:1;height:5px;background:#222;border-radius:99px;overflow:hidden;"><div id="pbar-uber" style="height:100%;width:0%;background:#f0ede8;border-radius:99px;transition:width .6s ease;"></div></div>
+            <span id="pamt-uber" style="font-family:'Space Mono',monospace;font-size:.7rem;width:60px;text-align:right;">0,00&nbsp;€</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'Space Mono',monospace;font-size:.65rem;width:38px;color:#34d399;">BOLT</span>
+            <div style="flex:1;height:5px;background:#222;border-radius:99px;overflow:hidden;"><div id="pbar-bolt" style="height:100%;width:0%;background:#34d399;border-radius:99px;transition:width .6s ease;"></div></div>
+            <span id="pamt-bolt" style="font-family:'Space Mono',monospace;font-size:.7rem;width:60px;text-align:right;">0,00&nbsp;€</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'Space Mono',monospace;font-size:.65rem;width:38px;color:#666;">OUTR</span>
+            <div style="flex:1;height:5px;background:#222;border-radius:99px;overflow:hidden;"><div id="pbar-out" style="height:100%;width:0%;background:#666;border-radius:99px;transition:width .6s ease;"></div></div>
+            <span id="pamt-out" style="font-family:'Space Mono',monospace;font-size:.7rem;width:60px;text-align:right;">0,00&nbsp;€</span>
+          </div>
+        </div>
+        <p class="hint-txt mt-10" id="plat-hint">Registe turnos para ver os dados.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><span class="card-label">⚠ Alertas</span><button class="chip" id="btn-add-alert">+ Novo</button></div>
+        <div id="alerts-list">
+          <div class="empty-state"><div class="empty-ico">🔔</div><div class="empty-txt">Sem alertas. Adicione datas de revisão, alvará IMT ou seguro.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TURNO -->
+    <section class="tab-pane" id="pane-turno">
+      <div class="sec-hd"><div class="sec-title">Turno</div></div>
+
+      <div class="chrono-card">
+        <div class="chrono-disp" id="chrono-disp">00:00:00</div>
+        <div class="chrono-st" id="chrono-st">Turno parado</div>
+        <div id="shift-start-inputs">
+          <div class="irow"><span class="irow-lbl">Km início</span><input type="number" id="km-start" placeholder="45230" inputmode="numeric"/></div>
+          <div class="irow"><span class="irow-lbl">Plataforma</span>
+            <select id="shift-plat">
+              <option value="uber">Uber</option><option value="bolt">Bolt</option>
+              <option value="ambas">Uber + Bolt</option><option value="outro">Outro</option>
+            </select>
+          </div>
+        </div>
+        <div class="stack mt-16">
+          <button class="btn btn-lime" id="btn-shift-start">▶ Iniciar Turno</button>
+          <button class="btn btn-danger hidden" id="btn-shift-stop">■ Terminar Turno</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><span class="card-label">Registar Viagem</span><span class="chip" id="trip-ct-badge">0</span></div>
+        <div class="form-grid">
+          <div class="form-field"><label class="inp-label">Plataforma</label><select id="trip-plat"><option value="uber">Uber</option><option value="bolt">Bolt</option><option value="outro">Outro</option></select></div>
+          <div class="form-field"><label class="inp-label">Total Bruto (€)</label><input type="number" step="0.01" id="trip-gross" placeholder="0,00" inputmode="decimal"/></div>
+          <div class="form-field"><label class="inp-label">Km viagem</label><input type="number" step="0.1" id="trip-km" placeholder="0,0" inputmode="decimal"/></div>
+          <div class="form-field"><label class="inp-label">Minutos</label><input type="number" id="trip-dur" placeholder="0" inputmode="numeric"/></div>
+        </div>
+        <button class="btn btn-outline mt-10" id="btn-add-trip">+ Registar Viagem</button>
+      </div>
+
+      <div class="card hidden" id="close-shift-card">
+        <div class="card-hd"><span class="card-label">Fechar Turno</span></div>
+        <div class="irow"><span class="irow-lbl">Km fim</span><input type="number" id="km-end" placeholder="45510" inputmode="numeric"/></div>
+        <div class="irow"><span class="irow-lbl">Combustível (€)</span><input type="number" id="fuel-cost" step="0.01" placeholder="0,00" inputmode="decimal"/></div>
+
+        <div class="hidden" id="shift-summary">
+          <div class="drain-section mt-14">
+            <div class="drain-title">⚡ Drenagem de Receita</div>
+            <div class="drain-bar-wrap">
+              <div class="drain-seg drain-plat" id="drain-plat-bar" style="width:25%">-25%</div>
+              <div class="drain-seg drain-iva"  id="drain-iva-bar"  style="width:5.66%">-6%</div>
+              <div class="drain-seg drain-avail"id="drain-avail-bar"style="width:69.34%">Disp.</div>
+            </div>
+            <div class="drain-legend">
+              <div class="drain-row row-plat"><span class="drain-lbl">[-25%] Comissão Plataforma</span><div style="text-align:right;"><span class="drain-val" id="d-plat">—</span><span class="drain-pct" id="d-plat-pct"></span></div></div>
+              <div class="drain-row row-iva"><span class="drain-lbl">[-6%] IVA Estado (5,66% ef.)</span><div style="text-align:right;"><span class="drain-val" id="d-iva">—</span><span class="drain-pct" id="d-iva-pct"></span></div></div>
+              <div class="drain-row row-avail"><span class="drain-lbl">[Disp.] Para custos e lucro</span><div style="text-align:right;"><span class="drain-val" id="d-avail">—</span><span class="drain-pct" id="d-avail-pct"></span></div></div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <div class="srow"><span class="srow-lbl">Total Bruto</span><span class="srow-val" id="sum-gross">—</span></div>
+            <div class="srow"><span class="srow-lbl">Comissão plataforma</span><span class="srow-val" id="sum-comm">—</span></div>
+            <div class="srow"><span class="srow-lbl">IVA ao Estado</span><span class="srow-val" id="sum-iva">—</span></div>
+            <div class="srow"><span class="srow-lbl">Receita líquida empresa</span><span class="srow-val" id="sum-net-biz">—</span></div>
+            <div class="divider"></div>
+            <div class="srow"><span class="srow-lbl">Combustível</span><span class="srow-val" id="sum-fuel">—</span></div>
+            <div class="srow"><span class="srow-lbl">Desgaste (0,05&nbsp;€/km)</span><span class="srow-val" id="sum-wear">—</span></div>
+            <div class="srow total"><span class="srow-lbl lime">Lucro Real Final</span><span class="srow-val" id="sum-profit">—</span></div>
+            <div class="srow"><span class="srow-lbl">Por hora</span><span class="srow-val" id="sum-hr">—</span></div>
+            <div class="srow"><span class="srow-lbl">Por km</span><span class="srow-val" id="sum-km">—</span></div>
+            <div class="hidden" id="fleet-split">
+              <div class="divider"></div>
+              <div class="srow"><span class="srow-lbl">Parte motorista (<span id="drv-pct-lbl">40</span>%)</span><span class="srow-val lime" id="sum-drv">—</span></div>
+              <div class="srow"><span class="srow-lbl">Parte frota (<span id="flt-pct-lbl">60</span>%)</span><span class="srow-val amber" id="sum-flt">—</span></div>
+            </div>
+            <div class="divider"></div>
+            <div class="srow"><span class="srow-lbl">💰 Poupado manutenção</span><span class="srow-val amber" id="sum-piggy-shift">—</span></div>
+            <div class="srow"><span class="srow-lbl">Total mealheiro acumulado</span><span class="srow-val amber" id="sum-piggy-tot">—</span></div>
+          </div>
+          <div class="profit-alert" id="profit-alert"></div>
+        </div>
+
+        <div class="stack mt-14">
+          <button class="btn btn-outline" id="btn-calc-shift">🧮 Calcular</button>
+          <button class="btn btn-lime hidden" id="btn-save-shift">💾 Guardar Turno</button>
+          <button class="btn btn-whatsapp hidden" id="btn-wa-shift">📲 Partilhar WhatsApp</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><span class="card-label">Viagens de Hoje</span></div>
+        <div id="trips-list"><div class="empty-state"><div class="empty-ico">🚗</div><div class="empty-txt">Nenhuma viagem registada.</div></div></div>
+      </div>
+    </section>
+
+    <!-- CALCULADORA -->
+    <section class="tab-pane" id="pane-calc">
+      <div class="sec-hd"><div class="sec-title">Calculadora</div></div>
+      <div class="card">
+        <div class="card-hd"><span class="card-label">Custo Real / km</span></div>
+        <div class="form-grid">
+          <div class="form-field"><label class="inp-label">Consumo L/100km</label><input type="number" step="0.1" id="c-cons" value="7.5" inputmode="decimal"/></div>
+          <div class="form-field"><label class="inp-label">Combustível €/L</label><input type="number" step="0.001" id="c-fuel-p" value="1.720" inputmode="decimal"/></div>
+          <div class="form-field"><label class="inp-label">Seguro/ano €</label><input type="number" id="c-ins" value="1200" inputmode="numeric"/></div>
+          <div class="form-field"><label class="inp-label">Km/ano</label><input type="number" id="c-kmyr" value="60000" inputmode="numeric"/></div>
+          <div class="form-field"><label class="inp-label">Manutenção/ano €</label><input type="number" id="c-maint" value="1800" inputmode="numeric"/></div>
+          <div class="form-field"><label class="inp-label">Valor viatura €</label><input type="number" id="c-carval" value="25000" inputmode="numeric"/></div>
+          <div class="form-field"><label class="inp-label">Anos amortização</label><input type="number" id="c-amort" value="5" inputmode="numeric"/></div>
+          <div class="form-field"><label class="inp-label">Comissão plat. %</label><input type="number" step="0.1" id="c-comm" value="25" inputmode="decimal"/></div>
+        </div>
+        <button class="btn btn-lime mt-10" id="btn-calc-km">Calcular</button>
+        <div class="hidden" id="calc-km-res" style="margin-top:14px;">
+          <div class="srow"><span class="srow-lbl">Combustível/km</span><span class="srow-val" id="r-fuel">—</span></div>
+          <div class="srow"><span class="srow-lbl">Seguro/km</span><span class="srow-val" id="r-ins">—</span></div>
+          <div class="srow"><span class="srow-lbl">Manutenção/km</span><span class="srow-val" id="r-maint">—</span></div>
+          <div class="srow"><span class="srow-lbl">Amortização/km</span><span class="srow-val" id="r-depr">—</span></div>
+          <div class="srow total"><span class="srow-lbl">Custo total/km</span><span class="srow-val lime" id="r-total">—</span></div>
+          <div class="srow total"><span class="srow-lbl">Break-even/km</span><span class="srow-val lime" id="r-be">—</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-label">Estimativa IRS — Cat. B</span></div>
+        <p class="hint-txt" style="margin-bottom:12px;">Regime simplificado · coeficiente 0,35 · Consulte sempre um contabilista.</p>
+        <label class="inp-label" for="irs-gross">Receita bruta anual (€)</label>
+        <input type="number" id="irs-gross" placeholder="24000" inputmode="numeric"/>
+        <button class="btn btn-outline mt-10" id="btn-calc-irs">Calcular IRS Estimado</button>
+        <div class="hidden" id="irs-res" style="margin-top:14px;background:#1f1f1f;border-radius:8px;padding:14px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-label">Comparador Comissões</span></div>
+        <label class="inp-label" for="comp-gross">Total Bruto da corrida (€)</label>
+        <input type="number" step="0.01" id="comp-gross" placeholder="12.50" inputmode="decimal"/>
+        <button class="btn btn-outline mt-10" id="btn-compare">Comparar Plataformas</button>
+        <div class="hidden" id="cmp-res" style="margin-top:14px;">
+          <div class="srow"><span class="srow-lbl">Uber (~25%)</span><span class="srow-val" id="cmp-uber">—</span></div>
+          <div class="srow"><span class="srow-lbl">Bolt (~20%)</span><span class="srow-val" id="cmp-bolt">—</span></div>
+          <div class="srow"><span class="srow-lbl">Outros (~22%)</span><span class="srow-val" id="cmp-out">—</span></div>
+          <p class="hint-txt mt-10">* Comissões indicativas. Verifique os termos actuais.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FROTA -->
+    <section class="tab-pane" id="pane-frota">
+      <div class="sec-hd"><div><div class="sec-title">Frota</div></div><button class="btn btn-lime btn-sm" id="btn-add-vehicle">+ Veículo</button></div>
+      <div class="card">
+        <div class="card-hd"><span class="card-label">Divisão de Receita</span></div>
+        <div class="form-grid">
+          <div class="form-field"><label class="inp-label">% Motorista</label><input type="number" id="drv-pct" value="40" min="0" max="100" inputmode="numeric"/></div>
+          <div class="form-field"><label class="inp-label">% Frota (auto)</label><input type="number" id="flt-pct" value="60" readonly style="opacity:.5;cursor:not-allowed;"/></div>
+        </div>
+        <button class="btn btn-outline mt-10" id="btn-save-config">Guardar</button>
+      </div>
+      <div id="fleet-list"></div>
+    </section>
+
+    <!-- RELATÓRIOS -->
+    <section class="tab-pane" id="pane-reports">
+      <div class="sec-hd"><div class="sec-title">Relatórios</div></div>
+      <div class="card">
+        <div class="card-hd"><span class="card-label">Exportar Diário</span></div>
+        <p class="hint-txt" style="margin-bottom:12px;">CSV compatível com Excel (UTF-8 BOM).</p>
+        <div class="form-grid">
+          <div class="form-field"><label class="inp-label">De</label><input type="date" id="rep-start"/></div>
+          <div class="form-field"><label class="inp-label">Até</label><input type="date" id="rep-end"/></div>
+        </div>
+        <div class="stack mt-10">
+          <button class="btn btn-lime" id="btn-export-csv">⬇ Exportar CSV</button>
+          <button class="btn btn-whatsapp" id="btn-wa-report">📲 Resumo por WhatsApp</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-label">Resumo Mensal</span></div>
+        <div id="monthly-content"><div class="empty-state"><div class="empty-ico">📊</div><div class="empty-txt">Sem dados registados este mês.</div></div></div>
+      </div>
+      <div class="card" style="border-color:rgba(245,166,35,.2);">
+        <div class="card-hd"><span class="card-label">📋 Obrigações Legais TVDE</span></div>
+        <ul class="legal-list">
+          <li><strong>IMT — Alvará TVDE:</strong> Renovação anual. Deve constar no veículo.</li>
+          <li><strong>AT — IRS Cat. B:</strong> Modelo 3 até 30 junho. Coeficiente 0,35.</li>
+          <li><strong>IVA:</strong> Isenção Art.º 9.º CIVA (singular). Empresas: trimestral.</li>
+          <li><strong>IPO:</strong> Veículos TVDE — inspeção anual obrigatória.</li>
+          <li><strong>Seguro:</strong> RC obrigatória + cobertura passageiros.</li>
+        </ul>
+        <p class="hint-txt mt-10">* Consulte sempre um contabilista certificado.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="dashboard"><span class="nav-ico">📊</span><span>Início</span></button>
+    <button class="nav-btn" data-tab="turno"><span class="nav-ico">🕐</span><span>Turno</span></button>
+    <button class="nav-btn" data-tab="calc"><span class="nav-ico">🧮</span><span>Calc</span></button>
+    <button class="nav-btn" data-tab="frota"><span class="nav-ico">🚙</span><span>Frota</span></button>
+    <button class="nav-btn" data-tab="reports"><span class="nav-ico">📄</span><span>Rel.</span></button>
+  </nav>
+</div>
+
+<!-- MODAIS -->
+<div class="modal hidden" id="modal-vehicle">
+  <div class="modal-back" id="mv-back"></div>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hd"><span class="modal-title">Novo Veículo</span><button class="modal-close" id="mv-close">✕</button></div>
+    <div class="form-grid">
+      <div class="form-field full"><label class="inp-label">Matrícula</label><input type="text" id="v-plate" placeholder="AA-00-BB" style="text-transform:uppercase"/></div>
+      <div class="form-field"><label class="inp-label">Marca/Modelo</label><input type="text" id="v-model" placeholder="Toyota Corolla"/></div>
+      <div class="form-field"><label class="inp-label">Motorista</label><input type="text" id="v-driver" placeholder="Nome"/></div>
+      <div class="form-field"><label class="inp-label">Km Actuais</label><input type="number" id="v-km" placeholder="0" inputmode="numeric"/></div>
+      <div class="form-field"><label class="inp-label">Revisão (km)</label><input type="number" id="v-svc-km" placeholder="50000" inputmode="numeric"/></div>
+      <div class="form-field"><label class="inp-label">Validade Alvará</label><input type="date" id="v-alvara"/></div>
+      <div class="form-field"><label class="inp-label">Validade Seguro</label><input type="date" id="v-insurance"/></div>
+    </div>
+    <button class="btn btn-lime mt-16" id="btn-save-vehicle">Guardar Veículo</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="modal-alert">
+  <div class="modal-back" id="ma-back"></div>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hd"><span class="modal-title">Novo Alerta</span><button class="modal-close" id="ma-close">✕</button></div>
+    <div class="form-grid">
+      <div class="form-field full"><label class="inp-label">Descrição</label><input type="text" id="alert-desc" placeholder="ex: Renovar alvará IMT"/></div>
+      <div class="form-field"><label class="inp-label">Data limite</label><input type="date" id="alert-date"/></div>
+      <div class="form-field"><label class="inp-label">Prioridade</label><select id="alert-prio"><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select></div>
+    </div>
+    <button class="btn btn-lime mt-16" id="btn-save-alert">Guardar Alerta</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="modal-goal">
+  <div class="modal-back" id="mg-back"></div>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-hd"><span class="modal-title">Meta Diária</span><button class="modal-close" id="mg-close">✕</button></div>
+    <label class="inp-label" for="goal-input">Valor alvo (€)</label>
+    <input type="number" step="5" id="goal-input" value="100" inputmode="numeric"/>
+    <button class="btn btn-lime mt-16" id="btn-save-goal">Guardar Meta</button>
+  </div>
+</div>
+
+<div class="install-bar hidden" id="install-bar">
+  <span class="install-ico">📲</span>
+  <div class="install-txt"><strong>Instalar KmLucro</strong><span>Offline · sem taxas de loja</span></div>
+  <button class="install-btn-inner" id="btn-install">Instalar</button>
+  <button class="install-dismiss" id="btn-dismiss-install">✕</button>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<!-- FIREBASE SDK — substituir firebaseConfig -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+  import { getAuth }       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  import { getFirestore }  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  import { getFunctions }  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+
+  // As tuas credenciais reais extraídas agora mesmo:
+  const firebaseConfig = {
+    apiKey:            "AIzaSyBfi7ihIHVQSnljAtlCrSVJacNwsu2xV7I",
+    authDomain:        "kmlucro-d5fd9.firebaseapp.com",
+    projectId:         "kmlucro-d5fd9",
+    storageBucket:     "kmlucro-d5fd9.firebasestorage.app",
+    messagingSenderId: "859826091060",
+    appId:             "1:859826091060:web:9c6dcbaacc13ad741b0661"
+  };
+
+  // Inicialização do Motor KmLucro
+  const app   = initializeApp(firebaseConfig);
+  window.__fb = {
+    auth:  getAuth(app),
+    db:    getFirestore(app),
+    funcs: getFunctions(app, 'europe-west1'),
+  };
+</script>
+<script src="script.js"></script>
+</body>
+</html>
